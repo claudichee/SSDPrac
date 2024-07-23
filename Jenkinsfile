@@ -54,8 +54,12 @@ pipeline {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
                     script {
                         def nvdApiKey = env.NVD_API_KEY
-                        sh """
-                            echo "Running Dependency-Check with NVD API Key: ${nvdApiKey}"
+                        echo "Running Dependency-Check with NVD API Key: ${nvdApiKey}"
+                        sh '''
+                            echo "Dependency-Check Home: ${DEPENDENCY_CHECK_HOME}"
+                            echo "Contents of Dependency-Check Home:"
+                            ls -la ${DEPENDENCY_CHECK_HOME}
+                            echo "Running Dependency-Check"
                             ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \\
                             --project "My Project" \\
                             --scan . \\
@@ -67,7 +71,7 @@ pipeline {
                             --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \\
                             --data ${DEPENDENCY_CHECK_HOME}/data \\
                             --nvdApiKey ${nvdApiKey}
-                        """
+                        '''
                     }
                 }
             }
