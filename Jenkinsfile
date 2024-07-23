@@ -61,12 +61,12 @@ pipeline {
                     
                     // Test a strong password
                     sh '''
-                    curl -s -X POST -F "password=StrongPass123" http://127.0.0.1:5000 | grep "Welcome"
+                    curl -s -X POST -F "password=ThisIsStrongPassword123" http://127.0.0.1:5000 | grep "Welcome"
                     '''
                     
                     // Test a weak password
                     sh '''
-                    curl -s -X POST -F "password=password" http://127.0.0.1:5000 | grep "Password does not meet the requirements"
+                    curl -s -X POST -F "password=password123" http://127.0.0.1:5000 | grep "Password does not meet the requirements"
                     '''
                     
                     // Stop the Flask app
