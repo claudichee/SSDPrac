@@ -1,19 +1,25 @@
-from flask import Flask, request, render_template_string
+from flask import Flask, render_template, request, redirect, url_for, session
 import re
-import requests
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'  # Necessary for session management
 
-# URL of the common passwords list
-COMMON_PASSWORDS_URL = 'https://raw.githubusercontent.com/danielmiessler/SecLists/master/Passwords/Common-Credentials/10-million-password-list-top-1000.txt'
-common_passwords = set(requests.get(COMMON_PASSWORDS_URL).text.splitlines())
-
-def is_password_strong(password):
-    # Check if the password is at least 10 characters long
-    if len(password) < 10:
+def validate_password(password):
+    # OWASP Top 10 Proactive Controls C6: Password Requirements
+    # Minimum 8 characters in length
+    if len(password) < 8:
         return False
-    # Check if the password is in the common passwords list
-    if password in common_passwords:
+    # At least one uppercase letter
+    if not re.search(r'[A-Z]', password):
+        return False
+    # At least one lowercase letter
+    if not re.search(r'[a-z]', password):
+        return False
+    # At least one digit
+    if not re.search(r'\d', password):
+        return False
+    # At least one special character
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False
     return True
 
@@ -21,32 +27,24 @@ def is_password_strong(password):
 def home():
     if request.method == 'POST':
         password = request.form['password']
-        if is_password_strong(password):
-            return render_template_string(WELCOME_PAGE_TEMPLATE, password=password)
+        if validate_password(password):
+            session['password'] = password
+            return redirect(url_for('welcome'))
         else:
-            return render_template_string(HOME_PAGE_TEMPLATE, error='Password does not meet the requirements.')
-    return render_template_string(HOME_PAGE_TEMPLATE)
+            return render_template('home.html', error='Password does not meet requirements.')
+    return render_template('home.html')
 
-HOME_PAGE_TEMPLATE = '''
-<!doctype html>
-<title>Password Verification</title>
-<h1>Enter your password</h1>
-<form method=post>
-    <input type=password name=password>
-    <input type=submit value=Login>
-</form>
-{% if error %}
-<p style="color:red;">{{ error }}</p>
-{% endif %}
-'''
+@app.route('/welcome')
+def welcome():
+    if 'password' in session:
+        password = session['password']
+        return render_template('welcome.html', password=password)
+    return redirect(url_for('home'))
 
-WELCOME_PAGE_TEMPLATE = '''
-<!doctype html>
-<title>Welcome</title>
-<h1>Welcome!</h1>
-<p>Your password: {{ password }}</p>
-<a href="/">Logout</a>
-'''
+@app.route('/logout')
+def logout():
+    session.pop('password', None)
+    return redirect(url_for('home'))
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True)
