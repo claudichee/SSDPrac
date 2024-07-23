@@ -55,6 +55,7 @@ pipeline {
                     script {
                         def nvdApiKey = env.NVD_API_KEY
                         sh """
+                            echo "Running Dependency-Check with NVD API Key: ${nvdApiKey}"
                             ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \\
                             --project "My Project" \\
                             --scan . \\
