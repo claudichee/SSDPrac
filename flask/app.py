@@ -4,6 +4,10 @@ import re
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Necessary for session management
 
+# Load common passwords into a set for fast lookup
+with open('common-passwords.txt', 'r') as file:
+    common_passwords = set(file.read().splitlines())
+
 def validate_password(password):
     # OWASP Top 10 Proactive Controls C6: Password Requirements
     # Minimum 8 characters in length
@@ -21,6 +25,9 @@ def validate_password(password):
     # At least one special character
     if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         return False
+    # Check if the password is in the list of common passwords
+    if password in common_passwords:
+        return False
     return True
 
 @app.route('/', methods=['GET', 'POST'])
@@ -31,7 +38,7 @@ def home():
             session['password'] = password
             return redirect(url_for('welcome'))
         else:
-            return render_template('home.html', error='Password does not meet requirements.')
+            return render_template('home.html', error='Password does not meet requirements or is too common.')
     return render_template('home.html')
 
 @app.route('/welcome')
