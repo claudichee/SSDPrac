@@ -42,22 +42,8 @@ pipeline {
         stage('OWASP DependencyCheck') {
             steps {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
-                    script {
-                        def dependencyCheckHome = tool name: 'OWASP Dependency-Check Vulnerabilities', type: 'org.jenkinsci.plugins.DependencyCheck.DependencyCheckInstallation'
-                        sh '''
-                            ${dependencyCheckHome}/bin/dependency-check.sh \
-                            --project "My Project" \
-                            --scan . \
-                            --format XML \
-                            --out dependency-check-report.xml \
-                            --noupdate \
-                            --cveValidForHours 0 \
-                            --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \
-                            --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \
-                            --data ${dependencyCheckHome}/data \
-                            --nvdApiKey ${NVD_API_KEY}
-                        '''
-                    }
+                    dependencyCheck additionalArguments: "--nvdApiKey ${NVD_API_KEY} --out dependency-check-report.xml --scan ./workspace", odcInstallation: 'OWASP Dependency-Check Vulnerabilities'
+                    dependencyCheckPublisher pattern: 'dependency-check-report.xml'
                 }
             }
         }
