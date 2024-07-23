@@ -40,6 +40,15 @@ pipeline {
             }
         }
 
+        stage('Debug Dependency-Check Path') {
+            steps {
+                script {
+                    echo "Dependency-Check Home: ${DEPENDENCY_CHECK_HOME}"
+                    sh 'ls -la ${DEPENDENCY_CHECK_HOME}/bin'
+                }
+            }
+        }
+
         stage('OWASP DependencyCheck') {
             steps {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
