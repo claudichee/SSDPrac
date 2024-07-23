@@ -3,10 +3,10 @@ pipeline {
 
     environment {
         VENV_PATH = 'venv'
-        FLASK_APP = 'workspace/flask/app.py'  // Correct path to the Flask app
+        FLASK_APP = 'SSDPrac/flask/app.py'  // Correct path to the Flask app
         PATH = "$VENV_PATH/bin:$PATH"
         SONARQUBE_SCANNER_HOME = tool name: 'SonarQube Scanner'
-        SONARQUBE_TOKEN = 'squ_7330f313742ae68e43c7562c57c658df9af19991'  // Set your new SonarQube token here
+        SONARQUBE_TOKEN = 'squ_6b9e705bf5f6986274a8183c0c8586559808c0f5'  // Set your new SonarQube token here
     }
     
     stages {
@@ -19,7 +19,7 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 dir('workspace') {
-                    git branch: 'main', url: 'https://github.com/claudichee/ssd2'
+                    git branch: 'main', url: 'https://github.com/claudichee/SSDPrac'
                 }
             }
         }
