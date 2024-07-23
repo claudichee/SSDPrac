@@ -6,16 +6,15 @@ pipeline {
         FLASK_APP = 'SSDPrac/flask/app.py'  // Correct path to the Flask app
         PATH = "$VENV_PATH/bin:$PATH"
         SONARQUBE_SCANNER_HOME = tool name: 'SonarQube Scanner'
-        SONARQUBE_TOKEN = 'squ_6b9e705bf5f6986274a8183c0c8586559808c0f5'  // Set your new SonarQube token here
     }
-    
+
     stages {
         stage('Check Docker') {
             steps {
                 sh 'docker --version'
             }
         }
-        
+
         stage('Clone Repository') {
             steps {
                 dir('workspace') {
@@ -23,7 +22,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Setup Virtual Environment') {
             steps {
                 dir('workspace/flask') {
@@ -31,7 +30,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Activate Virtual Environment and Install Dependencies') {
             steps {
                 dir('workspace/flask') {
@@ -39,16 +38,30 @@ pipeline {
                 }
             }
         }
-        
-		stage('OWASP DependencyCheck') {
-			  steps {
-				withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
-				  dependencyCheck additionalArguments: "-o './' -s './' -f 'ALL' --prettyPrint --nvdApiKey ${env.NVD_API_KEY}", odcInstallation: 'OWASP Dependency-Check Vulnerabilities'
-				  dependencyCheckPublisher pattern: 'dependency-check-report.xml'
-				}
-			  }
-			}
-        
+
+        stage('OWASP DependencyCheck') {
+            steps {
+                withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
+                    script {
+                        def dependencyCheckHome = tool name: 'Dependency-Check', type: 'org.jenkinsci.plugins.DependencyCheck.DependencyCheckInstallation'
+                        sh '''
+                            ${dependencyCheckHome}/bin/dependency-check.sh \
+                            --project "My Project" \
+                            --scan . \
+                            --format XML \
+                            --out dependency-check-report.xml \
+                            --noupdate \
+                            --cveValidForHours 0 \
+                            --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \
+                            --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \
+                            --data ${dependencyCheckHome}/data \
+                            --nvdApiKey ${NVD_API_KEY}
+                        '''
+                    }
+                }
+            }
+        }
+
         stage('UI Testing') {
             steps {
                 script {
@@ -58,23 +71,23 @@ pipeline {
                     sh 'sleep 5'
                     // Debugging: Check if the Flask app is running
                     sh 'curl -s http://127.0.0.1:5000 || echo "Flask app did not start"'
-                    
+
                     // Test a strong password
                     sh '''
                     curl -s -X POST -F "password=ThisIsStrongPassword123" http://127.0.0.1:5000 | grep "Welcome"
                     '''
-                    
+
                     // Test a weak password
                     sh '''
                     curl -s -X POST -F "password=password123" http://127.0.0.1:5000 | grep "Password does not meet the requirements"
                     '''
-                    
+
                     // Stop the Flask app
                     sh 'pkill -f "flask run"'
                 }
             }
         }
-        
+
         stage('Integration Testing') {
             steps {
                 dir('workspace/flask') {
@@ -82,7 +95,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 dir('workspace/flask') {
@@ -90,24 +103,26 @@ pipeline {
                 }
             }
         }
-        
+
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    dir('workspace/flask') {
-                        sh '''
-                        ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
-                        -Dsonar.projectKey=flask-app \
-                        -Dsonar.sources=. \
-                        -Dsonar.inclusions=app.py \
-                        -Dsonar.host.url=http://sonarqube:9000 \
-                        -Dsonar.login=${SONARQUBE_TOKEN}
-                        '''
+                    withCredentials([string(credentialsId: 'SONARQUBE_TOKEN', variable: 'SONARQUBE_TOKEN')]) {
+                        dir('workspace/flask') {
+                            sh '''
+                            ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
+                            -Dsonar.projectKey=flask-app \
+                            -Dsonar.sources=. \
+                            -Dsonar.inclusions=app.py \
+                            -Dsonar.host.url=http://sonarqube:9000 \
+                            -Dsonar.login=${SONARQUBE_TOKEN}
+                            '''
+                        }
                     }
                 }
             }
         }
-        
+
         stage('Deploy Flask App') {
             steps {
                 script {
@@ -123,7 +138,7 @@ pipeline {
             }
         }
     }
-    
+
     post {
         failure {
             script {
@@ -131,7 +146,7 @@ pipeline {
             }
         }
         always {
-            archiveArtifacts artifacts: 'workspace/flask/dependency-check-report/*.*', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'workspace/flask/dependency-check-report.xml', allowEmptyArchive: true
             archiveArtifacts artifacts: 'workspace/flask/integration-test-results.xml', allowEmptyArchive: true
         }
     }
