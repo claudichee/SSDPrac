@@ -6,7 +6,6 @@ pipeline {
         FLASK_APP = 'SSDPrac/flask/app.py'  // Correct path to the Flask app
         PATH = "$VENV_PATH/bin:$PATH"
         SONARQUBE_SCANNER_HOME = tool name: 'SonarQube Scanner'
-        DEPENDENCY_CHECK_HOME = tool name: 'OWASP Dependency-Check Vulnerabilities'
     }
 
     stages {
@@ -44,8 +43,9 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
                     script {
+                        def dependencyCheckHome = tool name: 'OWASP Dependency-Check Vulnerabilities', type: 'org.jenkinsci.plugins.DependencyCheck.DependencyCheckInstallation'
                         sh '''
-                            ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \
+                            ${dependencyCheckHome}/bin/dependency-check.sh \
                             --project "My Project" \
                             --scan . \
                             --format XML \
@@ -54,7 +54,7 @@ pipeline {
                             --cveValidForHours 0 \
                             --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \
                             --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \
-                            --data ${DEPENDENCY_CHECK_HOME}/data \
+                            --data ${dependencyCheckHome}/data \
                             --nvdApiKey ${NVD_API_KEY}
                         '''
                     }
