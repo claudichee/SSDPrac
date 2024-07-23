@@ -6,6 +6,7 @@ pipeline {
         FLASK_APP = 'SSDPrac/flask/app.py'  // Correct path to the Flask app
         PATH = "$VENV_PATH/bin:$PATH"
         SONARQUBE_SCANNER_HOME = tool name: 'SonarQube Scanner'
+        DEPENDENCY_CHECK_HOME = tool name: 'OWASP Dependency-Check Vulnerabilities'
     }
 
     stages {
@@ -42,8 +43,22 @@ pipeline {
         stage('OWASP DependencyCheck') {
             steps {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
-                    dependencyCheck additionalArguments: "--nvdApiKey ${NVD_API_KEY} --out dependency-check-report.xml --scan ./workspace", odcInstallation: 'OWASP Dependency-Check Vulnerabilities'
-                    dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+                    script {
+                        def nvdApiKey = env.NVD_API_KEY
+                        sh """
+                            ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \\
+                            --project "My Project" \\
+                            --scan . \\
+                            --format XML \\
+                            --out dependency-check-report.xml \\
+                            --noupdate \\
+                            --cveValidForHours 0 \\
+                            --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \\
+                            --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \\
+                            --data ${DEPENDENCY_CHECK_HOME}/data \\
+                            --nvdApiKey ${nvdApiKey}
+                        """
+                    }
                 }
             }
         }
@@ -96,11 +111,11 @@ pipeline {
                     withCredentials([string(credentialsId: 'SONARQUBE_TOKEN', variable: 'SONARQUBE_TOKEN')]) {
                         dir('workspace/flask') {
                             sh '''
-                            ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
-                            -Dsonar.projectKey=flask-app \
-                            -Dsonar.sources=. \
-                            -Dsonar.inclusions=app.py \
-                            -Dsonar.host.url=http://sonarqube:9000 \
+                            ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \\
+                            -Dsonar.projectKey=flask-app \\
+                            -Dsonar.sources=. \\
+                            -Dsonar.inclusions=app.py \\
+                            -Dsonar.host.url=http://sonarqube:9000 \\
                             -Dsonar.login=${SONARQUBE_TOKEN}
                             '''
                         }
