@@ -40,37 +40,22 @@ pipeline {
             }
         }
 
-        stage('Debug Dependency-Check Path') {
-            steps {
-                script {
-                    echo "Dependency-Check Home: ${DEPENDENCY_CHECK_HOME}"
-                    sh 'ls -la ${DEPENDENCY_CHECK_HOME}/bin'
-                }
-            }
-        }
-
         stage('OWASP DependencyCheck') {
             steps {
                 withCredentials([string(credentialsId: 'NVD_API_KEY', variable: 'NVD_API_KEY')]) {
                     script {
-                        def nvdApiKey = env.NVD_API_KEY
-                        echo "Running Dependency-Check with NVD API Key: ${nvdApiKey}"
                         sh '''
-                            echo "Dependency-Check Home: ${DEPENDENCY_CHECK_HOME}"
-                            echo "Contents of Dependency-Check Home:"
-                            ls -la ${DEPENDENCY_CHECK_HOME}
-                            echo "Running Dependency-Check"
-                            ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \\
-                            --project "My Project" \\
-                            --scan . \\
-                            --format XML \\
-                            --out dependency-check-report.xml \\
-                            --noupdate \\
-                            --cveValidForHours 0 \\
-                            --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \\
-                            --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \\
-                            --data ${DEPENDENCY_CHECK_HOME}/data \\
-                            --nvdApiKey ${nvdApiKey}
+                            ${DEPENDENCY_CHECK_HOME}/bin/dependency-check.sh \
+                            --project "My Project" \
+                            --scan . \
+                            --format XML \
+                            --out dependency-check-report.xml \
+                            --noupdate \
+                            --cveValidForHours 0 \
+                            --cveUrlBase "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-" \
+                            --cveUrlModified "https://nvd.nist.gov/feeds/xml/cve/nvdcve-2.0-Modified.xml.gz" \
+                            --data ${DEPENDENCY_CHECK_HOME}/data \
+                            --nvdApiKey ${NVD_API_KEY}
                         '''
                     }
                 }
@@ -125,11 +110,11 @@ pipeline {
                     withCredentials([string(credentialsId: 'SONARQUBE_TOKEN', variable: 'SONARQUBE_TOKEN')]) {
                         dir('workspace/flask') {
                             sh '''
-                            ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \\
-                            -Dsonar.projectKey=flask-app \\
-                            -Dsonar.sources=. \\
-                            -Dsonar.inclusions=app.py \\
-                            -Dsonar.host.url=http://sonarqube:9000 \\
+                            ${SONARQUBE_SCANNER_HOME}/bin/sonar-scanner \
+                            -Dsonar.projectKey=flask-app \
+                            -Dsonar.sources=. \
+                            -Dsonar.inclusions=app.py \
+                            -Dsonar.host.url=http://sonarqube:9000 \
                             -Dsonar.login=${SONARQUBE_TOKEN}
                             '''
                         }
